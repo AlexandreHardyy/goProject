@@ -93,12 +93,26 @@ func main() {
 		productGroup.POST("/create", func(c *gin.Context) {
 			prod := &Product{}
 			c.BindJSON(prod)
+			fmt.Println(prod)
 
 			_, err := db.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, now(), now())`, prod.Name, prod.Price)
 			CheckError(err)
 
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Product created",
+			})
+		})
+
+		// Update
+		productGroup.PUT("/update/:id", func(c *gin.Context) {
+			prod := &Product{}
+			c.BindJSON(prod)
+
+			_, err := db.Exec(`UPDATE product SET name=$1, price=$2, updatedAt=now() WHERE id=$3`, prod.Name, prod.Price, c.Param("id"))
+			CheckError(err)
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Product updated",
 			})
 		})
 	}
