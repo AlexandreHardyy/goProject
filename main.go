@@ -17,19 +17,18 @@ const (
 	dbname   = "postgres"
 )
 
-type product struct {
-	id        int
-	name      string
-	price     int
-	createdAt string
-	updatedAt string
+type Product struct {
+	Id        int     `json:"id"`
+	Name      string  `json:"name"`
+	Price     float32 `json:"price"`
+	CreatedAt string  `json:"createdAt"`
+	UpdatedAt string  `json:"updatedAt"`
 }
 
 func main() {
 	r := gin.Default()
 
 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	//psqlconn := "postgres://postgres:example@db/postgres?sslmode=disable"
 
 	// open database
 	db, err := sql.Open("postgres", psqlconn)
@@ -39,20 +38,22 @@ func main() {
 	err = db.Ping()
 	CheckError(err)
 
-	product := r.Group("/product")
+	// Routes pour les produits
+	productGroup := r.Group("/product")
 	{
-		product.GET("/", func(c *gin.Context) {
-			var res string
-			var productTab []string
+		// GetAll
+		productGroup.GET("/", func(c *gin.Context) {
+			var prod Product
+			productTab := []Product{}
 
-			rows, err := db.Query(`SELECT name FROM product`)
+			rows, err := db.Query(`SELECT * FROM product`)
 			CheckError(err)
 
 			defer rows.Close()
 			for rows.Next() {
-				err = rows.Scan(&res)
+				err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
 				CheckError(err)
-				productTab = append(productTab, res)
+				productTab = append(productTab, prod)
 			}
 
 			c.JSON(http.StatusOK, gin.H{
@@ -60,9 +61,44 @@ func main() {
 			})
 		})
 
-		product.GET("/:id", func(c *gin.Context) {
+		// GetById
+		productGroup.GET("/:id", func(c *gin.Context) {
+			prod := &Product{}
+
+			rows, err := db.Query(`SELECT * FROM product where id=$1`, c.Param("id"))
+			CheckError(err)
+
+			defer rows.Close()
+			if rows.Next() {
+				err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
+				CheckError(err)
+			}
+
 			c.JSON(http.StatusOK, gin.H{
-				"message": "getBiId",
+				"message": prod,
+			})
+		})
+
+		// Delete
+		productGroup.DELETE("/delete/:id", func(c *gin.Context) {
+			_, err := db.Exec(`DELETE FROM product where id=$1`, c.Param("id"))
+			CheckError(err)
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Product deleted",
+			})
+		})
+
+		// Create
+		productGroup.POST("/create", func(c *gin.Context) {
+			prod := &Product{}
+			c.BindJSON(prod)
+
+			_, err := db.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, now(), now())`, prod.Name, prod.Price)
+			CheckError(err)
+
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Product created",
 			})
 		})
 	}
