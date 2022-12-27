@@ -43,19 +43,7 @@ func main() {
 	{
 		// GetAll
 		productGroup.GET("/", func(c *gin.Context) {
-			var prod Product
-			productTab := []Product{}
-
-			rows, err := db.Query(`SELECT * FROM product`)
-			CheckError(err)
-
-			defer rows.Close()
-			for rows.Next() {
-				err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
-				CheckError(err)
-				productTab = append(productTab, prod)
-			}
-
+			productTab := GetAll(db)
 			c.JSON(http.StatusOK, gin.H{
 				"product": productTab,
 			})
@@ -63,17 +51,7 @@ func main() {
 
 		// GetById
 		productGroup.GET("/:id", func(c *gin.Context) {
-			prod := &Product{}
-
-			rows, err := db.Query(`SELECT * FROM product where id=$1`, c.Param("id"))
-			CheckError(err)
-
-			defer rows.Close()
-			if rows.Next() {
-				err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
-				CheckError(err)
-			}
-
+			prod := GetById(db, c.Param("id"))
 			c.JSON(http.StatusOK, gin.H{
 				"message": prod,
 			})
@@ -81,9 +59,7 @@ func main() {
 
 		// Delete
 		productGroup.DELETE("/delete/:id", func(c *gin.Context) {
-			_, err := db.Exec(`DELETE FROM product where id=$1`, c.Param("id"))
-			CheckError(err)
-
+			Delete(db, c.Param("id"))
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Product deleted",
 			})
@@ -94,10 +70,7 @@ func main() {
 			prod := &Product{}
 			c.BindJSON(prod)
 			fmt.Println(prod)
-
-			_, err := db.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, now(), now())`, prod.Name, prod.Price)
-			CheckError(err)
-
+			Create(db, prod.Name, prod.Price)
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Product created",
 			})
@@ -107,10 +80,7 @@ func main() {
 		productGroup.PUT("/update/:id", func(c *gin.Context) {
 			prod := &Product{}
 			c.BindJSON(prod)
-
-			_, err := db.Exec(`UPDATE product SET name=$1, price=$2, updatedAt=now() WHERE id=$3`, prod.Name, prod.Price, c.Param("id"))
-			CheckError(err)
-
+			Update(db, c.Param("id"), prod.Name, prod.Price)
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Product updated",
 			})
@@ -118,6 +88,53 @@ func main() {
 	}
 
 	r.Run(":3000")
+}
+
+func GetAll(db *sql.DB) []Product {
+	var prod Product
+	productTab := []Product{}
+
+	rows, err := db.Query(`SELECT * FROM product`)
+	CheckError(err)
+
+	defer rows.Close()
+	for rows.Next() {
+		err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
+		CheckError(err)
+		productTab = append(productTab, prod)
+	}
+
+	return productTab
+}
+
+func GetById(db *sql.DB, id string) Product {
+	var prod Product
+
+	rows, err := db.Query(`SELECT * FROM product where id=$1`, id)
+	CheckError(err)
+
+	defer rows.Close()
+	if rows.Next() {
+		err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
+		CheckError(err)
+	}
+
+	return prod
+}
+
+func Delete(db *sql.DB, id string) {
+	_, err := db.Exec(`DELETE FROM product where id=$1`, id)
+	CheckError(err)
+}
+
+func Update(db *sql.DB, id string, name string, price float32) {
+	_, err := db.Exec(`UPDATE product SET name=$1, price=$2, updatedAt=now() WHERE id=$3`, name, price, id)
+	CheckError(err)
+}
+
+func Create(db *sql.DB, name string, price float32) {
+	_, err := db.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, now(), now())`, name, price)
+	CheckError(err)
 }
 
 func CheckError(err error) {
