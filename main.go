@@ -3,10 +3,13 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"goProject/broadcaster"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -116,6 +119,9 @@ func main() {
 				return
 			}
 
+			broadcaster := broadcaster.GetBroadcaster()
+			broadcaster.Submit(payment)
+
 			// Return a success message if the payment was successfully inserted
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Payment created",
@@ -221,10 +227,31 @@ func main() {
 		})
 	}
 
+	r.GET("/stream/payment", Stream)
+
 	err = r.Run(":3000")
 	if err != nil {
 		return
 	}
+}
+
+func Stream(c *gin.Context) {
+	listener := make(chan interface{})
+	broadcaster := broadcaster.GetBroadcaster()
+
+	broadcaster.Register(listener)
+	defer broadcaster.Unregister(listener)
+
+	clientGone := c.Request.Context().Done()
+	c.Stream(func(w io.Writer) bool {
+		select {
+		case <-clientGone:
+			return false
+		case payment := <-listener:
+			c.SSEvent("payment", payment)
+			return true
+		}
+	})
 }
 
 func GetAll(db *sql.DB) []Product {
