@@ -2,19 +2,21 @@ package controller
 
 import (
 	"database/sql"
-	"goProject/database"
 	"net/http"
+	"time"
+
+	"github.com/AlexandreHardyy/goProject/database"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
 type Product struct {
-	Id        int     `json:"id"`
-	Name      string  `json:"name"`
-	Price     float32 `json:"price"`
-	CreatedAt string  `json:"createdAt"`
-	UpdatedAt string  `json:"updatedAt"`
+	Id        int       `json:"id"`
+	Name      string    `json:"name" binding:"required"`
+	Price     float32   `json:"price" binding:"required"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // GetAllProduct godoc
@@ -104,12 +106,25 @@ func DeleteProduct(c *gin.Context) {
 // @Router /products [post]
 func CreateProduct(c *gin.Context) {
 	prod := &Product{}
-	_ = c.BindJSON(prod)
-	_, err := database.DB.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, now(), now())`, prod.Name, prod.Price)
-	CheckError(err)
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Product created",
-	})
+
+	prod.CreatedAt = time.Now()
+	prod.UpdatedAt = time.Now()
+	if err := c.BindJSON(prod); err == nil {
+		_, err := database.DB.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, $3, $4)`, prod.Name, prod.Price, prod.CreatedAt, prod.UpdatedAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Product created",
+				"product": prod,
+			})
+		}
+
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
 }
 
 // UpdateProduct godoc
@@ -122,12 +137,24 @@ func CreateProduct(c *gin.Context) {
 // @Router /products/{id} [put]
 func UpdateProduct(c *gin.Context) {
 	prod := &Product{}
-	c.BindJSON(prod)
-	_, err := database.DB.Exec(`UPDATE product SET name=$1, price=$2, updatedAt=now() WHERE id=$3`, prod.Name, prod.Price, c.Param("id"))
-	CheckError(err)
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Product updated",
-	})
+	prod.UpdatedAt = time.Now()
+
+	if err := c.BindJSON(prod); err == nil {
+		_, err := database.DB.Exec(`UPDATE product SET name=$1, price=$2, updatedAt=$3 WHERE id=$4`, prod.Name, prod.Price, prod.UpdatedAt, c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Product updated",
+				"product": prod,
+			})
+		}
+
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
 }
 
 // CheckError godoc

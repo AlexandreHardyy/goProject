@@ -1,4 +1,4 @@
-module goProject
+module github.com/AlexandreHardyy/goProject
 
 go 1.19
 

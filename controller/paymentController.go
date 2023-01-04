@@ -2,11 +2,13 @@ package controller
 
 import (
 	"database/sql"
-	"goProject/database"
 	"net/http"
 
-	"goProject/broadcaster"
+	"github.com/AlexandreHardyy/goProject/database"
+
 	"time"
+
+	"github.com/AlexandreHardyy/goProject/broadcaster"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -38,7 +40,8 @@ func CreatePayment(c *gin.Context) {
 	}
 
 	// Insert the payment into the database
-	_, err := database.DB.Exec(`INSERT INTO payment (ProductId, PricePaid, createdAt, updatedAt) VALUES ($1, $2, now(), now())`, payment.ProductId, payment.PricePaid)
+	query, err := database.DB.Prepare(`INSERT INTO payment (ProductId, PricePaid, createdAt, updatedAt) VALUES ($1, $2, now(), now()) RETURNING id`)
+	query.QueryRow(payment.ProductId, payment.PricePaid).Scan(&payment.Id)
 	if err != nil {
 		// Return an Internal Server Error if there was a problem inserting the payment
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

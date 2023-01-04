@@ -1,8 +1,9 @@
 package controller
 
 import (
-	"goProject/broadcaster"
 	"io"
+
+	"github.com/AlexandreHardyy/goProject/broadcaster"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"

@@ -1,14 +1,15 @@
 package main
 
 import (
+	"github.com/AlexandreHardyy/goProject/controller"
+	"github.com/AlexandreHardyy/goProject/database"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	"github.com/swaggo/files"       // swagger embed files
-	"github.com/swaggo/gin-swagger" // gin-swagger middleware
-	"goProject/controller"
-	"goProject/database"
+	swaggerFiles "github.com/swaggo/files"     // swagger embed files
+	ginSwagger "github.com/swaggo/gin-swagger" // gin-swagger middleware
 
-	_ "goProject/docs"
+	_ "github.com/AlexandreHardyy/goProject/docs"
 )
 
 // @title           API in golang
@@ -31,11 +32,6 @@ func main() {
 	database.ConnectDatabase()
 	// use ginSwagger middleware to serve the API docs
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	/*r.GET("/swagger/*any", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Swagger",
-		})
-	})*/
 
 	// Routes pour les produits
 	productGroup := r.Group("/product")
