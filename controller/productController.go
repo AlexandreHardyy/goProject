@@ -1,23 +1,15 @@
 package controller
 
 import (
-	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/AlexandreHardyy/goProject/database"
+	"github.com/AlexandreHardyy/goProject/models"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
-
-type Product struct {
-	Id        int       `json:"id"`
-	Name      string    `json:"name" binding:"required"`
-	Price     float32   `json:"price" binding:"required"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-}
 
 // GetAllProduct godoc
 // @Summary Get all products
@@ -28,23 +20,9 @@ type Product struct {
 // @Success 200 {object} Product
 // @Router /products [get]
 func GetAllProduct(c *gin.Context) {
-	var prod Product
-	var productTab []Product
+	var productTab []models.Product
 
-	rows, err := database.DB.Query(`SELECT * FROM product`)
-	CheckError(err)
-
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(rows)
-	for rows.Next() {
-		err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
-		CheckError(err)
-		productTab = append(productTab, prod)
-	}
+	database.DB.Find(&productTab)
 
 	c.JSON(http.StatusOK, gin.H{
 		"product": productTab,
@@ -60,21 +38,10 @@ func GetAllProduct(c *gin.Context) {
 // @Success 200 {object} Product
 // @Router /products/{id} [get]
 func GetByIdProduct(c *gin.Context) {
-	var prod Product
+	var prod models.Product
 
-	rows, err := database.DB.Query(`SELECT * FROM product where id=$1`, c.Param("id"))
-	CheckError(err)
+	database.DB.Find(&prod, c.Param("id"))
 
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(rows)
-	if rows.Next() {
-		err = rows.Scan(&prod.Id, &prod.Name, &prod.Price, &prod.CreatedAt, &prod.UpdatedAt)
-		CheckError(err)
-	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": prod,
 	})
@@ -89,8 +56,7 @@ func GetByIdProduct(c *gin.Context) {
 // @Success 200 {object} Product
 // @Router /products/{id} [delete]
 func DeleteProduct(c *gin.Context) {
-	_, err := database.DB.Exec(`DELETE FROM product where id=$1`, c.Param("id"))
-	CheckError(err)
+	database.DB.Delete(&models.Product{}, c.Param("id"))
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Product deleted",
 	})
@@ -105,26 +71,17 @@ func DeleteProduct(c *gin.Context) {
 // @Success 200 {object} Product
 // @Router /products [post]
 func CreateProduct(c *gin.Context) {
-	prod := &Product{}
-
+	prod := &models.Product{}
+	c.BindJSON(prod)
 	prod.CreatedAt = time.Now()
 	prod.UpdatedAt = time.Now()
-	if err := c.BindJSON(prod); err == nil {
-		_, err := database.DB.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, $3, $4)`, prod.Name, prod.Price, prod.CreatedAt, prod.UpdatedAt)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Product created",
-				"product": prod,
-			})
-		}
 
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
+	database.DB.Create(&prod)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Product created",
+		"product": prod,
+	})
 }
 
 // UpdateProduct godoc
@@ -136,25 +93,17 @@ func CreateProduct(c *gin.Context) {
 // @Success 200 {object} Product
 // @Router /products/{id} [put]
 func UpdateProduct(c *gin.Context) {
-	prod := &Product{}
+	prod := &models.Product{}
+	database.DB.Find(&prod, c.Param("id"))
+	c.BindJSON(prod)
 	prod.UpdatedAt = time.Now()
 
-	if err := c.BindJSON(prod); err == nil {
-		_, err := database.DB.Exec(`UPDATE product SET name=$1, price=$2, updatedAt=$3 WHERE id=$4`, prod.Name, prod.Price, prod.UpdatedAt, c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Product updated",
-				"product": prod,
-			})
-		}
+	database.DB.Save(&prod)
 
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Product updated",
+		"product": prod,
+	})
 }
 
 // CheckError godoc
