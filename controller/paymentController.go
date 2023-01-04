@@ -20,6 +20,14 @@ type Payment struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// CreatePayment godoc
+// @Summary Create a payment
+// @Description Create a payment
+// @Tags payments
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} Payment
+// @Router /payments [post]
 func CreatePayment(c *gin.Context) {
 	// Bind the request body to the Payment struct
 	var payment Payment
@@ -46,6 +54,14 @@ func CreatePayment(c *gin.Context) {
 	})
 }
 
+// UpdatePayment godoc
+// @Summary Update a payment
+// @Description Update a payment
+// @Tags payments
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} Payment
+// @Router /payments/{id} [put]
 func UpdatePayment(c *gin.Context) {
 	// Bind the request body to the Payment struct
 	var payment Payment
@@ -69,6 +85,14 @@ func UpdatePayment(c *gin.Context) {
 	})
 }
 
+// DeletePayment godoc
+// @Summary Delete a payment
+// @Description Delete a payment
+// @Tags payments
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} Payment
+// @Router /payments/{id} [delete]
 func DeletePayment(c *gin.Context) {
 	// Delete the payment from the database
 	_, err := database.DB.Exec(`DELETE FROM payment where id=$1`, c.Param("id"))
@@ -83,6 +107,14 @@ func DeletePayment(c *gin.Context) {
 	})
 }
 
+// GetByIdPayment godoc
+// @Summary Get a payment
+// @Description Get a payment
+// @Tags payments
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} Payment
+// @Router /payments/{id} [get]
 func GetByIdPayment(c *gin.Context) {
 	// Initialize a new payment struct
 	payment := &Payment{}
@@ -104,6 +136,14 @@ func GetByIdPayment(c *gin.Context) {
 	})
 }
 
+// GetAllPayment godoc
+// @Summary Get all payments
+// @Description Get all payments
+// @Tags payments
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} Payment
+// @Router /payments [get]
 func GetAllPayment(c *gin.Context) {
 	var payment Payment
 	var paymentArray []Payment
