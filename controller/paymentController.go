@@ -16,8 +16,8 @@ import (
 
 type Payment struct {
 	Id        int       `json:"id"`
-	ProductId int       `json:"productId"`
-	PricePaid float64   `json:"pricePaid"`
+	ProductId int       `json:"productId" binding:"required"`
+	PricePaid float64   `json:"pricePaid" binding:"required"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -40,8 +40,8 @@ func CreatePayment(c *gin.Context) {
 	}
 
 	// Insert the payment into the database
-	query, err := database.DB.Prepare(`INSERT INTO payment (ProductId, PricePaid, createdAt, updatedAt) VALUES ($1, $2, now(), now()) RETURNING id`)
-	query.QueryRow(payment.ProductId, payment.PricePaid).Scan(&payment.Id)
+	//query, err := database.DB.Prepare(`INSERT INTO payment (ProductId, PricePaid, createdAt, updatedAt) VALUES ($1, $2, now(), now()) RETURNING id`)
+	err := database.DB.QueryRow(`INSERT INTO payment (ProductId, PricePaid, createdAt, updatedAt) VALUES ($1, $2, now(), now()) RETURNING id`, payment.ProductId, payment.PricePaid).Scan(&payment.Id)
 	if err != nil {
 		// Return an Internal Server Error if there was a problem inserting the payment
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -66,26 +66,23 @@ func CreatePayment(c *gin.Context) {
 // @Success 200 {object} Payment
 // @Router /payments/{id} [put]
 func UpdatePayment(c *gin.Context) {
-	// Bind the request body to the Payment struct
 	var payment Payment
-	if err := c.ShouldBindJSON(&payment); err != nil {
-		// Return a Bad Request error if the request body is invalid
+
+	if err := c.BindJSON(&payment); err == nil {
+		err := database.DB.QueryRow(`UPDATE payment SET ProductId=$1, PricePaid=$2, updatedAt=now() WHERE id=$3 RETURNING id`, payment.ProductId, payment.PricePaid, c.Param("id")).Scan(&payment.Id)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		} else {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Payment updated",
+			})
+		}
+
+	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
 	}
-
-	// Update the payment in the database
-	_, err := database.DB.Exec(`UPDATE payment SET ProductId=$1, PricePaid=$2, updatedAt=now() WHERE id=$3`, payment.ProductId, payment.PricePaid, c.Param("id"))
-	if err != nil {
-		// Return an Internal Server Error if there was a problem updating the payment
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Return a success message if the payment was successfully updated
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Payment updated",
-	})
 }
 
 // DeletePayment godoc

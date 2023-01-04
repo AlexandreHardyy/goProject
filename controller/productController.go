@@ -110,7 +110,7 @@ func CreateProduct(c *gin.Context) {
 	prod.CreatedAt = time.Now()
 	prod.UpdatedAt = time.Now()
 	if err := c.BindJSON(prod); err == nil {
-		_, err := database.DB.Exec(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, $3, $4)`, prod.Name, prod.Price, prod.CreatedAt, prod.UpdatedAt)
+		err := database.DB.QueryRow(`INSERT INTO product (name, price, createdAt, updatedAt) VALUES ($1, $2, $3, $4) RETURNING id`, prod.Name, prod.Price, prod.CreatedAt, prod.UpdatedAt).Scan(&prod.Id)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
@@ -140,7 +140,7 @@ func UpdateProduct(c *gin.Context) {
 	prod.UpdatedAt = time.Now()
 
 	if err := c.BindJSON(prod); err == nil {
-		_, err := database.DB.Exec(`UPDATE product SET name=$1, price=$2, updatedAt=$3 WHERE id=$4`, prod.Name, prod.Price, prod.UpdatedAt, c.Param("id"))
+		err := database.DB.QueryRow(`UPDATE product SET name=$1, price=$2, updatedAt=$3 WHERE id=$4 RETURNING id, createdAt, updatedAt`, prod.Name, prod.Price, prod.UpdatedAt, c.Param("id")).Scan(&prod.Id, &prod.CreatedAt, &prod.UpdatedAt)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),

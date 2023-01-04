@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS Product (
    updatedAt TIMESTAMP NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS Payement (
+CREATE TABLE IF NOT EXISTS Payment (
    Id serial PRIMARY KEY,
    productId INTEGER NOT NULL REFERENCES Product(id),
    pricePaid REAL NOT NULL,
